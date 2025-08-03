@@ -507,20 +507,24 @@ export const enhanceTweakWithAnchors = (
   
   // Create preservation anchors based on the tweak type
   const preservationAnchors = [
-    `Maintain the exact architectural layout and structure of ${venueName}`,
-    `Preserve all walls, ceiling, floor, windows, and doors exactly as they are`,
-    `Keep the same spatial proportions and room dimensions`,
-    `Maintain the original furniture arrangement and positioning`,
-    `Preserve the existing color scheme and material finishes`,
-    `Keep the same architectural style and design language`,
-    `Only modify the specific elements mentioned in the user request`
+    `Maintain the EXACT architectural layout and structure of ${venueName}`,
+    `Preserve ALL walls, ceiling, floor, windows, and doors EXACTLY as they are`,
+    `Keep the SAME spatial proportions and room dimensions`,
+    `Maintain the ORIGINAL furniture arrangement and positioning`,
+    `Preserve the EXISTING color scheme and material finishes`,
+    `Keep the SAME architectural style and design language`,
+    `Maintain the EXACT camera angle and perspective`,
+    `Preserve ALL structural elements and room geometry`,
+    `Keep the SAME lighting setup and electrical layout`,
+    `Only modify the specific elements mentioned in the user request`,
+    `Apply MINIMAL changes to preserve the original design integrity`
   ].join(', ');
 
   // Enhanced positive prompt with structural preservation
   const enhancedPositivePrompt = `${basePrompt} ${preservationAnchors}. User request: ${userTweak}. Apply only the requested changes while preserving everything else.`;
 
   // Enhanced negative prompt to prevent unwanted changes
-  const negativePrompt = `blurry, low quality, distorted, unrealistic, cartoon, anime, painting, drawing, sketch, watermark, text, logo, signature, oversaturated, underexposed, overexposed, bad anatomy, extra limbs, missing limbs, deformed, mutated, ugly, disgusting, amputation, different room layout, changed architecture, modified structure, different furniture arrangement, altered spatial proportions, different lighting setup, changed color scheme, different materials, architectural changes, structural modifications, layout changes, structural modifications, different room shape, modified floor plan, changed ceiling height, different window placement, altered door positions, different room dimensions`;
+  const negativePrompt = `blurry, low quality, distorted, unrealistic, cartoon, anime, painting, drawing, sketch, watermark, text, logo, signature, oversaturated, underexposed, overexposed, bad anatomy, extra limbs, missing limbs, deformed, mutated, ugly, disgusting, amputation, DIFFERENT room layout, CHANGED architecture, MODIFIED structure, DIFFERENT furniture arrangement, ALTERED spatial proportions, DIFFERENT lighting setup, CHANGED color scheme, DIFFERENT materials, architectural changes, structural modifications, layout changes, DIFFERENT room shape, MODIFIED floor plan, CHANGED ceiling height, DIFFERENT window placement, ALTERED door positions, DIFFERENT room dimensions, DIFFERENT camera angle, DIFFERENT perspective, DIFFERENT room geometry, DIFFERENT structural elements, DIFFERENT lighting fixtures, DIFFERENT electrical layout, DIFFERENT room proportions, DIFFERENT architectural style, DIFFERENT design language, DIFFERENT spatial arrangement, DIFFERENT room configuration, DIFFERENT building structure, DIFFERENT interior layout, DIFFERENT room design, DIFFERENT venue layout, DIFFERENT space arrangement, DIFFERENT room setup, DIFFERENT venue structure, DIFFERENT building layout, DIFFERENT interior design, DIFFERENT room architecture, DIFFERENT venue design, DIFFERENT space design, DIFFERENT room structure, DIFFERENT venue architecture, DIFFERENT building design, DIFFERENT interior architecture, DIFFERENT room configuration, DIFFERENT venue setup, DIFFERENT space structure, DIFFERENT room layout, DIFFERENT venue layout, DIFFERENT building structure, DIFFERENT interior layout, DIFFERENT room design, DIFFERENT venue structure, DIFFERENT space arrangement, DIFFERENT room setup, DIFFERENT venue design, DIFFERENT space design, DIFFERENT room architecture, DIFFERENT venue architecture, DIFFERENT building design, DIFFERENT interior architecture, DIFFERENT room configuration, DIFFERENT venue setup, DIFFERENT space structure`;
 
   return { positivePrompt: enhancedPositivePrompt, negativePrompt };
 };

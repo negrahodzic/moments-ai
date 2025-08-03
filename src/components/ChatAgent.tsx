@@ -14,7 +14,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { Send, Sparkles, Calendar, Users, MapPin, DollarSign, Palette, Star } from 'lucide-react';
+import { Send, Sparkles, Calendar, Users, MapPin, DollarSign, Palette, Star, Check, Loader2 } from 'lucide-react';
 import ClaudeExtractionService from '@/api/claude';
 import { toast } from 'sonner';
 import { Badge } from '@/components/ui/badge';
@@ -38,13 +38,55 @@ interface ChatMessage {
   parameters?: Partial<SessionState>;
   reasoning?: string;
   confidence?: number;
+  venues?: any[]; // Changed from Venue[] to any[] as Venue type is removed
 }
 
 interface ChatAgentProps {
   onPhaseChange?: (phase: string) => void;
   onSessionUpdate?: (session: SessionState) => void;
   claudeApiKey?: string;
+  colorScheme?: 'default' | 'ai-engine';
 }
+
+// Color scheme configurations
+const colorSchemes = {
+  default: {
+    background: 'bg-gradient-to-br from-background to-secondary/20',
+    card: 'bg-gradient-card',
+    primary: 'bg-primary',
+    primaryText: 'text-primary-foreground',
+    secondary: 'bg-muted',
+    secondaryText: 'text-muted-foreground',
+    userMessage: 'bg-gradient-primary text-primary-foreground',
+    aiMessage: 'bg-gradient-card',
+    input: 'bg-gradient-card',
+    sendButton: 'bg-gradient-primary hover:shadow-glow',
+    parameterSelected: 'bg-primary text-primary-foreground shadow-glow',
+    parameterUnselected: 'bg-muted text-muted-foreground',
+    badge: 'border-border text-muted-foreground',
+    typing: 'bg-primary',
+    title: 'text-muted-foreground',
+    reasoning: 'text-muted-foreground'
+  },
+  'ai-engine': {
+    background: 'bg-[#1A0A3D]',
+    card: 'bg-white',
+    primary: 'bg-[#1A0A3D]',
+    primaryText: 'text-white',
+    secondary: 'bg-gray-200',
+    secondaryText: 'text-gray-600',
+    userMessage: 'bg-[#1A0A3D] text-white',
+    aiMessage: 'bg-white text-gray-700',
+    input: 'bg-white',
+    sendButton: 'bg-[#99FF00] hover:bg-[#99FF00]/80 text-[#1A0A3D]',
+    parameterSelected: 'bg-[#1A0A3D] text-white',
+    parameterUnselected: 'bg-gray-200 text-gray-600',
+    badge: 'border-gray-300 text-gray-600',
+    typing: 'bg-[#99FF00]',
+    title: 'text-gray-700',
+    reasoning: 'text-gray-300'
+  }
+};
 
 // Mock LLM function that simulates parameter extraction
 const mockLLMCall = async (message: string, currentSession: SessionState) => {
@@ -114,7 +156,7 @@ const mockLLMCall = async (message: string, currentSession: SessionState) => {
   return response;
 };
 
-const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, claudeApiKey }) => {
+const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, claudeApiKey, colorScheme = 'default' }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: '1',
@@ -136,12 +178,15 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
   });
   
   const [isTyping, setIsTyping] = useState(false);
+  const [isLoadingVenues, setIsLoadingVenues] = useState(false);
   const [conversationHistory, setConversationHistory] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [showDebugInfo, setShowDebugInfo] = useState(false);
 
   // Development mode detection
   const isDevelopment = import.meta.env.DEV;
+
+  const colors = colorSchemes[colorScheme];
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -169,6 +214,33 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
   const isSessionComplete = (session: SessionState): boolean => {
     return !!(session.dateTime && session.headcount && session.eventType && 
               session.location && session.budget && session.mood && session.mustHaves);
+  };
+
+  const handleVenueSelect = async (venueId: string) => {
+    try {
+      // Removed venue-related imports, so this function is now a placeholder
+      // In a real application, you would fetch venue details here
+      toast.info('Venue selection is not yet implemented in this version.');
+      // For now, just update the session state
+      setSessionState(prev => ({ ...prev, selectedVenue: venueId }));
+      
+      const venueMessage: ChatMessage = {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: `Perfect! I've selected "${venueId}" for your event. This venue has a capacity of 100 guests and is located in downtown. The style is elegant and fits your high budget range.`,
+        timestamp: new Date()
+      };
+      
+      setMessages(prev => [...prev, venueMessage]);
+      
+      // Navigate to next phase (venue selection page)
+      setTimeout(() => {
+        onPhaseChange?.('PHASE1_COMPLETE');
+      }, 2000);
+    } catch (error) {
+      console.error('Error selecting venue:', error);
+      toast.error('Unable to select venue. Please try again.');
+    }
   };
 
   const handleUserMessage = async () => {
@@ -213,9 +285,23 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
         
         if (isSessionComplete(updatedSession)) {
           aiResponse = "Perfect! I've got all the details. Let me find some amazing spaces for you. ✨";
+          
+          // Show loading message
+          const loadingMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date(),
+            parameters: extractionResult.parameters
+          };
+          
+          setMessages(prev => [...prev, loadingMessage]);
+          
+          // Navigate to venue selection page
           setTimeout(() => {
             onPhaseChange?.('PHASE1_COMPLETE');
-          }, 1500);
+          }, 2000);
+          
         } else if (extractionResult.followUpQuestion) {
           aiResponse = extractionResult.followUpQuestion;
         } else {
@@ -223,17 +309,19 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
           aiResponse = nextQuestion;
         }
 
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: aiResponse,
-          timestamp: new Date(),
-          parameters: extractionResult.parameters,
-          reasoning: extractionResult.reasoning,
-          confidence: extractionResult.confidence
-        };
+        if (!isSessionComplete(updatedSession)) {
+          const assistantMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date(),
+            parameters: extractionResult.parameters,
+            reasoning: extractionResult.reasoning,
+            confidence: extractionResult.confidence
+          };
 
-        setMessages(prev => [...prev, assistantMessage]);
+          setMessages(prev => [...prev, assistantMessage]);
+        }
         
       } else {
         // Fallback to mock implementation
@@ -246,23 +334,39 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
         
         if (isSessionComplete(updatedSession)) {
           aiResponse = "Perfect! I've got all the details. Let me find some amazing spaces for you. ✨";
+          
+          // Show loading message
+          const loadingMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date(),
+            parameters: response.extractedParams
+          };
+          
+          setMessages(prev => [...prev, loadingMessage]);
+          
+          // Navigate to venue selection page
           setTimeout(() => {
             onPhaseChange?.('PHASE1_COMPLETE');
-          }, 1500);
+          }, 2000);
+          
         } else {
           const nextQuestion = getNextQuestion(updatedSession);
           aiResponse = nextQuestion;
         }
 
-        const assistantMessage: ChatMessage = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: aiResponse,
-          timestamp: new Date(),
-          parameters: response.extractedParams
-        };
+        if (!isSessionComplete(updatedSession)) {
+          const assistantMessage: ChatMessage = {
+            id: (Date.now() + 1).toString(),
+            role: 'assistant',
+            content: aiResponse,
+            timestamp: new Date(),
+            parameters: response.extractedParams
+          };
 
-        setMessages(prev => [...prev, assistantMessage]);
+          setMessages(prev => [...prev, assistantMessage]);
+        }
       }
     } catch (error) {
       console.error('Error processing message:', error);
@@ -327,17 +431,20 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
 
     if (extractedParams.length === 0) return null;
 
+    // For AI Engine scheme, don't show the parameter display
+    if (colorScheme === 'ai-engine') return null;
+
     return (
-      <div className="mb-4 p-4 bg-gradient-card rounded-lg border border-border/50">
+      <div className={`mb-4 p-4 ${colors.card} rounded-lg border border-border/50`}>
         <div className="flex items-center justify-between mb-3">
-          <h4 className="text-sm font-semibold text-muted-foreground">AI Extracted Parameters</h4>
-          <Badge variant="outline" className="text-xs">
+          <h4 className={`text-sm font-semibold ${colors.title}`}>AI Extracted Parameters</h4>
+          <Badge variant="outline" className={`text-xs ${colors.badge}`}>
             {extractedParams.length}/7 Complete
           </Badge>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           {extractedParams.map(([key, value]) => (
-            <div key={key} className="flex items-center space-x-2 p-2 bg-background/50 rounded text-xs">
+            <div key={key} className={`flex items-center space-x-2 p-2 bg-background/50 rounded text-xs`}>
               {getParameterIcon(key)}
               <div>
                 <div className="font-medium capitalize">{key}</div>
@@ -378,9 +485,9 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
   };
 
   return (
-    <div className="flex flex-col h-full max-w-4xl mx-auto">
-      {/* Session Progress Indicator */}
-      <div className="bg-gradient-card p-4 rounded-lg shadow-soft mb-4">
+    <div className="flex flex-col h-screen min-h-screen max-w-4xl mx-auto">
+      {/* Fixed Top Section - Session Progress Indicator */}
+      <div className={`${colors.card} p-4 rounded-lg shadow-soft mb-4 flex-shrink-0`}>
         <div className="flex items-center justify-between mb-3">
           <div className="flex flex-wrap gap-2">
             {Object.entries(sessionState).map(([key, value]) => (
@@ -388,8 +495,8 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
                 key={key}
                 className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm transition-smooth ${
                   value 
-                    ? 'bg-primary text-primary-foreground shadow-glow' 
-                    : 'bg-muted text-muted-foreground'
+                    ? `${colors.parameterSelected}` 
+                    : `${colors.parameterUnselected}`
                 }`}
               >
                 {getParameterIcon(key)}
@@ -399,8 +506,8 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
             ))}
           </div>
           
-          {/* Development Debug Toggle */}
-          {isDevelopment && (
+          {/* Development Debug Toggle - only show for default scheme */}
+          {isDevelopment && colorScheme === 'default' && (
             <Button
               variant="ghost"
               size="sm"
@@ -412,8 +519,8 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
           )}
         </div>
 
-        {/* Debug Information */}
-        {isDevelopment && showDebugInfo && (
+        {/* Debug Information - only show for default scheme */}
+        {isDevelopment && showDebugInfo && colorScheme === 'default' && (
           <div className="mt-3 p-3 bg-background/50 rounded border border-border/50">
             <h4 className="text-xs font-semibold mb-2">🔧 Debug Info</h4>
             <div className="text-xs space-y-1">
@@ -499,8 +606,8 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
       {/* AI Parameter Extraction Display */}
       {renderParameterDisplay()}
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 p-4">
+      {/* Scrollable Messages Area */}
+      <div className="flex-1 overflow-y-auto space-y-4 p-4 min-h-0 max-h-full">
         {messages.map((message) => (
           <div
             key={message.id}
@@ -508,11 +615,16 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
           >
             <Card className={`max-w-[80%] p-4 transition-spring hover:shadow-soft ${
               message.role === 'user'
-                ? 'bg-gradient-primary text-primary-foreground'
-                : 'bg-gradient-card'
+                ? `${colors.userMessage}`
+                : `${colors.aiMessage}`
             }`}>
               <p className="text-sm leading-relaxed">{message.content}</p>
-              {message.parameters && Object.keys(message.parameters).length > 0 && (
+              
+              {/* Venue options */}
+              {/* Removed venue-related code */}
+              
+              {/* Remove parameter display and reasoning for AI Engine scheme */}
+              {colorScheme === 'default' && message.parameters && Object.keys(message.parameters).length > 0 && (
                 <div className="mt-2 pt-2 border-t border-white/20">
                   <div className="flex flex-wrap gap-1">
                     {Object.entries(message.parameters).map(([key, value]) => (
@@ -523,13 +635,13 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
                   </div>
                 </div>
               )}
-              {message.reasoning && (
+              {colorScheme === 'default' && message.reasoning && (
                 <div className="mt-2 pt-2 border-t border-white/20">
-                  <div className="text-xs text-muted-foreground">
+                  <div className={`text-xs ${colors.reasoning}`}>
                     <strong>AI Reasoning:</strong> {message.reasoning}
                   </div>
                   {message.confidence && (
-                    <div className="text-xs text-muted-foreground mt-1">
+                    <div className={`text-xs ${colors.reasoning} mt-1`}>
                       <strong>Confidence:</strong> {Math.round(message.confidence * 100)}%
                     </div>
                   )}
@@ -541,20 +653,32 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
         
         {isTyping && (
           <div className="flex justify-start">
-            <Card className="bg-gradient-card p-4">
+            <Card className={`${colors.card} p-4`}>
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                <div className={`w-2 h-2 ${colors.typing} rounded-full animate-bounce`}></div>
+                <div className={`w-2 h-2 ${colors.typing} rounded-full animate-bounce`} style={{ animationDelay: '0.1s' }}></div>
+                <div className={`w-2 h-2 ${colors.typing} rounded-full animate-bounce`} style={{ animationDelay: '0.2s' }}></div>
               </div>
             </Card>
           </div>
         )}
+        
+        {isLoadingVenues && (
+          <div className="flex justify-start">
+            <Card className={`${colors.card} p-4`}>
+              <div className="flex items-center space-x-2">
+                <Loader2 className={`w-4 h-4 ${colors.typing} animate-spin`} />
+                <span className="text-sm">Finding perfect venues for you...</span>
+              </div>
+            </Card>
+          </div>
+        )}
+        
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="p-4 bg-gradient-card rounded-lg shadow-soft">
+      {/* Fixed Input at Bottom */}
+      <div className={`p-4 ${colors.input} rounded-lg shadow-soft flex-shrink-0 sticky bottom-0`}>
         <div className="flex gap-2">
           <Input
             value={inputValue}
@@ -565,15 +689,15 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
           />
           <Button 
             onClick={handleUserMessage}
-            disabled={!inputValue.trim() || isTyping}
-            className="bg-gradient-primary hover:shadow-glow transition-spring"
+            disabled={!inputValue.trim() || isTyping || isLoadingVenues}
+            className={`${colors.sendButton} transition-spring`}
           >
             <Send className="w-4 h-4" />
           </Button>
         </div>
         
-        {/* Development Hints */}
-        {messages.length === 0 && (
+        {/* Development Hints - only show for default scheme */}
+        {messages.length === 0 && colorScheme === 'default' && (
           <div className="mt-4 pt-4 border-t border-border/50">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs text-muted-foreground font-medium">🧪 Development Hints</p>
@@ -601,8 +725,8 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
           </div>
         )}
 
-        {/* Example Prompts */}
-        {messages.length === 0 && (
+        {/* Example Prompts - only show for default scheme */}
+        {messages.length === 0 && colorScheme === 'default' && (
           <div className="mt-4 pt-4 border-t border-border/50">
             <p className="text-xs text-muted-foreground mb-2">Quick Examples:</p>
             <div className="flex flex-wrap gap-2">
@@ -624,8 +748,8 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
           </div>
         )}
 
-        {/* Parameter Status */}
-        {messages.length > 0 && (
+        {/* Parameter Status - only show for default scheme */}
+        {messages.length > 0 && colorScheme === 'default' && (
           <div className="mt-4 pt-4 border-t border-border/50">
             <div className="flex items-center justify-between mb-2">
               <p className="text-xs text-muted-foreground font-medium">📊 Parameter Status</p>
@@ -639,6 +763,29 @@ const ChatAgent: React.FC<ChatAgentProps> = ({ onPhaseChange, onSessionUpdate, c
                   <div className={`w-2 h-2 rounded-full ${value ? 'bg-green-500' : 'bg-gray-300'}`}></div>
                   <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}</span>
                 </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Simple suggestion hints for AI Engine scheme */}
+        {messages.length === 0 && colorScheme === 'ai-engine' && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <p className="text-xs text-gray-600 mb-2">Try these examples:</p>
+            <div className="flex flex-wrap gap-2">
+              {[
+                "I'm organizing a hackathon next month for 50 people",
+                "Wedding in July, about 100 guests, formal mood",
+                "Birthday party next weekend, maybe 30 friends",
+                "Corporate dinner downtown, high budget, elegant"
+              ].map((example, index) => (
+                <button
+                  key={index}
+                  onClick={() => setInputValue(example)}
+                  className="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-full transition-colors text-gray-700"
+                >
+                  {example}
+                </button>
               ))}
             </div>
           </div>
