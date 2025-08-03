@@ -1,6 +1,6 @@
 /*
 ImmersiMoments - Main Application Interface
-Product: ImmersiMoments - "Imagine your moment — live before you book."
+Product: Moments.AI - "Imagine your moment — live before you book."
 Mission: Empower anyone to co-create unforgettable experiences through seamless, AI-driven conversational design
 
 Phase Implementation:
@@ -21,8 +21,9 @@ import VenueCarousel from '@/components/VenueCarousel';
 import VisualizationCanvas from '@/components/VisualizationCanvas';
 import { listVenues, getVenue, type Venue } from '@/api/venueDb';
 import { generateImage, buildVenuePrompt } from '@/api/runware';
-import { Sparkles, Calendar, Users, MapPin, Wand2, Video, Download, Play, Brain } from 'lucide-react';
+import { Sparkles, Calendar, Users, MapPin, Wand2, Video, Download, Play, Brain, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
+import { useNavigate } from 'react-router-dom';
 
 type AppPhase = 'INTRO' | 'CHAT' | 'VENUES' | 'VISUALIZATION' | 'VIDEO' | 'EXPORT';
 
@@ -53,6 +54,7 @@ const Index = () => {
   const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
   const [currentImageUrl, setCurrentImageUrl] = useState<string>('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const navigate = useNavigate();
   
   // Read Claude API key from environment variable
   const claudeApiKey = import.meta.env.VITE_CLAUDE_API_KEY || '';
@@ -63,7 +65,7 @@ const Index = () => {
       return;
     }
     setCurrentPhase('CHAT');
-    toast.success('Welcome to ImmersiMoments! Let\'s create something amazing together.');
+    toast.success('Welcome to Moments.AI! Let\'s create something amazing together.');
   };
 
   const handlePhaseChange = async (phase: string) => {
@@ -136,65 +138,86 @@ const Index = () => {
     switch (currentPhase) {
       case 'INTRO':
         return (
-          <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-secondary/20">
-            <div className="text-center max-w-4xl mx-auto px-6">
-              {/* Hero Section */}
-              <div className="mb-12">
-                <div className="flex items-center justify-center mb-6">
-                  <div className="p-3 rounded-full bg-gradient-primary shadow-glow">
-                    <Sparkles className="w-8 h-8 text-white" />
+          <div className="min-h-screen flex flex-col">
+            {/* Main Content */}
+            <div className="mt-10 flex-1 flex items-center justify-center bg-gradient-to-br from-background to-secondary/20">
+              <div className="text-center max-w-4xl mx-auto px-6">
+                {/* Hero Section */}
+                <div className="mb-12">
+                  <div className="flex items-center justify-center mb-6">
+                    <div className="p-3 rounded-full bg-gradient-primary shadow-glow">
+                      <Sparkles className="w-8 h-8 text-white" />
+                    </div>
                   </div>
+                  
+                  <h1 className="text-5xl md:text-7xl font-bold mb-6">
+                    <span className="bg-gradient-hero bg-clip-text text-transparent">
+                      Moments.AI
+                    </span>
+                  </h1>
+                  
+                  <p className="text-2xl md:text-3xl text-muted-foreground mb-4 font-light">
+                    "Imagine your moment — live before you book."
+                  </p>
+                  
+                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed">
+                    Co-create unforgettable experiences through AI-driven conversational design.
+                    No forms, no guesswork — just pure creative collaboration.
+                  </p>
+                  
+                  <Button 
+                    variant="hero" 
+                    size="lg" 
+                    onClick={handleStartPlanning}
+                    className="mb-12"
+                    disabled={!claudeApiKey}
+                  >
+                    <Wand2 className="w-5 h-5 mr-2" />
+                    {claudeApiKey ? 'Start Planning Your Event' : 'API Key Required'}
+                  </Button>
+                  
+                  {!claudeApiKey && (
+                    <div className="mb-8 p-4 bg-gradient-card rounded-lg border border-border/50">
+                      <p className="text-sm text-muted-foreground">
+                        <strong>Setup Required:</strong> Set the VITE_CLAUDE_API_KEY environment variable to enable AI-powered planning.
+                      </p>
+                    </div>
+                  )}
                 </div>
-                
-                <h1 className="text-5xl md:text-7xl font-bold mb-6">
-                  <span className="bg-gradient-hero bg-clip-text text-transparent">
-                    ImmersiMoments
-                  </span>
-                </h1>
-                
-                <p className="text-2xl md:text-3xl text-muted-foreground mb-4 font-light">
-                  "Imagine your moment — live before you book."
-                </p>
-                
-                <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-12 leading-relaxed">
-                  Co-create unforgettable experiences through AI-driven conversational design.
-                  No forms, no guesswork — just pure creative collaboration.
-                </p>
-                
-                <Button 
-                  variant="hero" 
-                  size="lg" 
-                  onClick={handleStartPlanning}
-                  className="mb-12"
-                  disabled={!claudeApiKey}
-                >
-                  <Wand2 className="w-5 h-5 mr-2" />
-                  {claudeApiKey ? 'Start Planning Your Event' : 'API Key Required'}
-                </Button>
-                
-                {!claudeApiKey && (
-                  <div className="mb-8 p-4 bg-gradient-card rounded-lg border border-border/50">
-                    <p className="text-sm text-muted-foreground">
-                      <strong>Setup Required:</strong> Set the VITE_CLAUDE_API_KEY environment variable to enable AI-powered planning.
-                    </p>
-                  </div>
-                )}
-              </div>
 
-              {/* Feature Preview */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {[
-                  { icon: Calendar, title: 'Natural Conversation', desc: 'Tell us about your event naturally' },
-                  { icon: MapPin, title: 'Smart Recommendations', desc: 'AI-curated venue matches' },
-                  { icon: Wand2, title: 'Live Visualization', desc: 'See your space come to life' },
-                  { icon: Video, title: 'Immersive Preview', desc: 'Walkthrough videos & audio tours' }
-                ].map((feature, index) => (
-                  <Card key={index} className="p-6 bg-gradient-card hover:shadow-soft transition-spring">
-                    <feature.icon className="w-8 h-8 text-primary mx-auto mb-4" />
-                    <h3 className="font-semibold mb-2">{feature.title}</h3>
-                    <p className="text-sm text-muted-foreground">{feature.desc}</p>
-                  </Card>
-                ))}
+                {/* Feature Preview */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {[
+                    { icon: Calendar, title: 'Natural Conversation', desc: 'Tell us about your event naturally' },
+                    { icon: MapPin, title: 'Smart Recommendations', desc: 'AI-curated venue matches' },
+                    { icon: Wand2, title: 'Live Visualization', desc: 'See your space come to life' },
+                    { icon: Video, title: 'Immersive Preview', desc: 'Walkthrough videos & audio tours' }
+                  ].map((feature, index) => (
+                    <Card key={index} className="p-6 bg-gradient-card hover:shadow-soft transition-spring">
+                      <feature.icon className="w-8 h-8 text-primary mx-auto mb-4" />
+                      <h3 className="font-semibold mb-2">{feature.title}</h3>
+                      <p className="text-sm text-muted-foreground">{feature.desc}</p>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Clients Section */}
+            <div className="bg-gradient-to-br from-background to-secondary/20 py-16 px-6">
+              <div className="max-w-6xl mx-auto text-center">
+                <h2 className="text-3xl font-bold text-primary mb-8">
+                  Our Clients
+                </h2>
+                <div className="flex justify-center">
+                  <Button
+                    variant="ghost"
+                    onClick={() => navigate('/engine')}
+                    className="bg-[#1A0A3D] border border-[#99FF00] hover:border-[#99FF00]/80 hover:bg-[#99FF00]/10 transition-all duration-300 text-[#99FF00] font-mono text-xl font-bold px-8 py-6"
+                  >
+                    AI ENGINE
+                  </Button>
+                </div>
               </div>
             </div>
           </div>
