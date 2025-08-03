@@ -65,8 +65,9 @@ class ElevenLabsService {
       }
 
       const data = await response.json();
+      console.log('🎵 [ElevenLabs] Server response:', data);
       return {
-        audioUrl: data.audio_url || data.url,
+        audioUrl: data.audioUrl || data.audio_url || data.url,
         duration: data.duration || 5,
         cost: data.cost
       };
