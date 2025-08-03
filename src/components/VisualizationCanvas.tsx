@@ -79,8 +79,8 @@ export default function VisualizationCanvas({
       const result = await generateImage({
         prompt: fullPrompt,
         negativePrompt: enhancedNegativePrompt,
-        initImageUrl: currentImageUrl !== originalVenueImage ? currentImageUrl : undefined,
-        strength: currentImageUrl !== originalVenueImage ? 0.8 : undefined,
+        initImageUrl: currentImageUrl, // Always use the current image as base
+        strength: 0.7, // Lower strength to preserve more of original
         width: 1024,
         height: 768,
         model: 'rundiffusion:130@100',
